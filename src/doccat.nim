@@ -22,7 +22,7 @@ proc buildDocTable(): Table[string, Entry] =
             for entry in docObj.entries:
                 # If someone knows a better way, please tell
                 echo(path.replace("dimscord/dimscord/", "dimscord/").replace(".json", ".nim"))
-                result[entry.name] = Entry(
+                result[entry.name.toLower()] = Entry(
                     line: entry.line,
                     col: entry.col,
                     code: entry.code,
@@ -50,6 +50,9 @@ let discord = newDiscordClient(token)
 proc reply(m: Message, content: string) {.async.} =
     discard await discord.api.sendMessage(m.channelId, content)
 
+proc reply(m: Message, embed: Option[Embed]) {.async.} =
+    discard await discord.api.sendMessage(m.channelId, embed = embed)
+
 discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
     if m.author.bot: return
     let args = m.content.split(" ")
@@ -58,11 +61,18 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
         if args.len() == 1:
             await m.reply("You have not specified a name")
         else:
-            let name = args[1]
+            let name = args[1].toLower()
             if docTable.hasKey(name):
                 let entry = docTable[name]
+                    
                 if entry.description.isSome:
-                    await m.reply(entry.description.get() & "\n" & fmt"https://github.com/krisppurg/dimscord/blob/{DIMSCORD_VERSION}/{entry.file.get()}#L" & $entry.line)
+                    var description = entry.description.get()
+                    description &= "\n```nim\n" & entry.code & "```"
+                    await m.reply(some Embed(
+                        title: some entry.name,
+                        description: some description,
+                        url: some fmt"https://github.com/krisppurg/dimscord/blob/{DIMSCORD_VERSION}/{entry.file.get()}#L" & $entry.line
+                    ))
                 else:
                     await m.reply("```nim\n" & entry.code & "```")
             else:
