@@ -71,12 +71,12 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
                     
                 if entry.description.isSome:
                     var description = entry.description.get()
-                    description &= "\n```nim\n" & entry.code & "```"
                     await m.reply(some Embed(
                         title: some entry.name,
                         description: some description,
                         url: some fmt"https://github.com/krisppurg/dimscord/blob/{DIMSCORD_VERSION}/{entry.file.get()}#L" & $entry.line
                     ))
+                    await m.reply("\n```nim\n" & entry.code & "```")
                 else:
                     await m.reply("```nim\n" & entry.code & "```")
             else:
