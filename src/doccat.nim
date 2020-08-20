@@ -14,6 +14,7 @@ proc buildDocTable(): Table[string, Entry] =
     let ulRegex = re"<ul class=.simple.>(.*)\n?<\/ul>" # Start of list
     let liRegex = re"<li>(.*)</li>" # List item
     let singleLineCodeRegex = re"<tt class=.docutils literal.><span class=.pre.>([^<]+)<\/span><\/tt>" # Code example html
+    let aRegex = re"<a class=.[\w ]+. href=.([^<]+).>[^<]+<\/a>"
     for kind, path in walkDir("dimscord/dimscord"):
         if path.endsWith(".json"):
             echo(path)
@@ -21,11 +22,12 @@ proc buildDocTable(): Table[string, Entry] =
             var docObj = json.to(JsonDoc)
             for entry in docObj.entries:
                 # If someone knows a better way, please tell
-                echo(path.replace("dimscord/dimscord/", "dimscord/").replace(".json", ".nim"))
+                if entry.name == "editGuild":
+                    echo(entry.description)
                 result[entry.name.toLower()] = Entry(
                     line: entry.line,
                     col: entry.col,
-                    code: entry.code,
+                    code: entry.code.unindent(),
                     `type`: entry.`type`,
                     name: entry.name,
                     file: some(path.replace("dimscord/dimscord/", "dimscord/").replace(".json", ".nim")),
@@ -33,7 +35,9 @@ proc buildDocTable(): Table[string, Entry] =
                                             .replace(ulRegex, "$1")
                                             .replace(liRegex, "\n - $1")
                                             .replace(singleLineCodeRegex, "`$1`")
-                                            .replace("&quot;", "\"") else: none string 
+                                            .replace("&quot;", "\"") 
+                                            .replace(aRegex, "$1") else: none string
+                                            
                 )
 
 when defined(release):
