@@ -23,6 +23,7 @@ task pull, "Pulls files from dimscord":
         exec("git clone https://github.com/krisppurg/dimscord")
         cd("dimscord")
     let latestRelease = gorge("git --git-dir dimscord/.git describe --tags", cache="test")
+    putEnv("DIMSCORD_VERSION", latestRelease.split("-")[0])
     echo(latestRelease)
     exec("git checkout " & latestRelease)
     cd("..")
@@ -30,5 +31,5 @@ task pull, "Pulls files from dimscord":
 task genDoc, "Generates the JSON documentation files":
     pullTask()
     cd("dimscord")
-    exec("nim jsondoc --outdir=docs --project --git.url:https://github.com/krisppurg/dimscord dimscord.nim")
+    exec("nim jsondoc --project --git.url:https://github.com/krisppurg/dimscord dimscord.nim")
 

@@ -7,6 +7,7 @@ type
         `type`*: string
         name*: string
         description*: Option[string]
+        file*: Option[string]
         
     JsonDoc* = ref object
         orig*: string
