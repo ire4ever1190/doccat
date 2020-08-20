@@ -58,7 +58,7 @@ proc reply(m: Message, content: string) {.async, inline.} =
 
 proc trunc(s: string, length: int): string =
     if s.len() > length:
-        return s[0..<length]
+        return s[0..<length] & "(click link below to see full version)"
     return s
     
 proc reply(m: Message, embed: Option[Embed]) {.async, inline.} =
