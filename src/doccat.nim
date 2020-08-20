@@ -56,6 +56,11 @@ let discord = newDiscordClient(token)
 proc reply(m: Message, content: string) {.async, inline.} =
     discard await discord.api.sendMessage(m.channelId, content)
 
+proc trunc(s: string, length: int): string =
+    if s.len() > length:
+        return s[0..<length]
+    return s
+    
 proc reply(m: Message, embed: Option[Embed]) {.async, inline.} =
     discard await discord.api.sendMessage(m.channelId, embed = embed)
 
@@ -79,10 +84,10 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
                             description: entry.description,
                             url: some fmt"https://github.com/krisppurg/dimscord/blob/{DIMSCORD_VERSION}/{entry.file.get()}#L{entry.line}"
                         )
-                        discard await discord.api.sendMessage(m.channelId, &"```nim\n{entry.code[0..<1500]}```", embed = embed)
+                        discard await discord.api.sendMessage(m.channelId, &"```nim\n{entry.code.trunc(1500)}```", embed = embed)
 
                     else:
-                        await m.reply(&"```nim\n{entry.code[0..<1500]}```")
+                        await m.reply(&"```nim\n{entry.code.trunc(1500)}```")
                 else:
                     await m.reply("I'm sorry, but there is nothing with this name")
     # except:
