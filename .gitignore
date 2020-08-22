@@ -2,3 +2,5 @@ dimscord/
 config.json
 doccat
 src/doccat
+*.config
+version

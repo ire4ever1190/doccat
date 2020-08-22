@@ -24,6 +24,7 @@ task pull, "Pulls files from dimscord":
         cd("dimscord")
     let latestRelease = gorge("git --git-dir dimscord/.git describe --tags", cache="test").split("-")[0]
     echo(latestRelease)
+    writeFile("version", latestRelease)
     exec("git checkout " & latestRelease)
     cd("..")
 
