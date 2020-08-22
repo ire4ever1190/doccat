@@ -22,8 +22,7 @@ task pull, "Pulls files from dimscord":
     else:
         exec("git clone https://github.com/krisppurg/dimscord")
         cd("dimscord")
-    let latestRelease = gorge("git --git-dir dimscord/.git describe --tags", cache="test")
-    putEnv("DIMSCORD_VERSION", latestRelease.split("-")[0])
+    let latestRelease = gorge("git --git-dir dimscord/.git describe --tags", cache="test").split("-")[0]
     echo(latestRelease)
     exec("git checkout " & latestRelease)
     cd("..")
