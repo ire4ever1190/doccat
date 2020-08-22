@@ -18,7 +18,7 @@ type
         file*: Option[string]
         signature*: Option[Signature]
         
-    JsonDoc* = ref object
+    JsonDoc* = object
         orig*: string
         nimble*: string
         moduleDescription*: string

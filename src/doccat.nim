@@ -11,11 +11,13 @@ import options
 import strformat
 
 proc buildDocTable(): Table[string, Entry] =
+    # HTML to markdown regex
     let ulRegex = re"<ul class=.simple.>\n?([\W\s\w]+)\n?<\/ul>" # Start of list
     let liRegex = re"<li>(.*)</li>" # List item
     let singleLineCodeRegex = re"<tt class=.docutils literal.><span class=.pre.>([^<]+)<\/span><\/tt>" # Code example html
     let aRegex = re"<a class=.[\w ]+. href=.([^<]+).>([^<]+)<\/a>"
     let pRegex = re"<p>([\W\s\w]+)</p>"
+    
     for kind, path in walkDir("dimscord/dimscord"):
         if path.endsWith(".json"):
             echo(path)
@@ -23,24 +25,19 @@ proc buildDocTable(): Table[string, Entry] =
             var docObj = json.to(JsonDoc)
             for entry in docObj.entries:
                 # If someone knows a better way, please tell, deep copy or something isn't it?
-                if entry.name == "Events":
-                    echo(entry.description)
-                result[entry.name.toLower()] = Entry(
-                    line: entry.line,
-                    col: entry.col,
-                    code: entry.code,
-                    `type`: entry.`type`,
-                    name: entry.name,
-                    file: some(path.replace("dimscord/dimscord/", "dimscord/").replace(".json", ".nim")),
-                    description: if entry.description.isSome: some entry.description.get()
-                                            .replace(ulRegex, "$1")
-                                            .replace(liRegex, "\n - $1")
-                                            .replace(singleLineCodeRegex, "`$1`")
-                                            .replace("&quot;", "\"") 
-                                            .replace(aRegex, "[$2]($1)")
-                                            .replace(pRegex, "$1") else: none string
-                                            
-                )
+                if entry.description.isSome:
+                    var description = entry.description.unsafeAddr
+                    description[] = some description[].get()
+                            .replace(ulRegex, "$1")
+                            .replace(liRegex, "\n - $1")
+                            .replace(singleLineCodeRegex, "`$1`")
+                            .replace("&quot;", "\"") 
+                            .replace(aRegex, "[$2]($1)")
+                            .replace(pRegex, "$1")
+                var entryFile = entry.file.unsafeAddr
+                entryFile[] = some(path.replace("dimscord/dimscord/", "dimscord/").replace(".json", ".nim"))
+
+                result[entry.name.toLower()] = entry
 
 when defined(release):
     const token = TOKEN
