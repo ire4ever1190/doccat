@@ -9,14 +9,15 @@ type
         arguments*: Option[seq[Argument]]
     
     Entry* = object
+        ## Might use more of this in the future
         line*: int
-        col*: int
+        # col*: int
         code*: string
-        `type`*: string
+        # `type`*: string
         name*: string
         description*: Option[string]
         file*: Option[string]
-        signature*: Option[Signature]
+        # signature*: Option[Signature]
         
     JsonDoc* = object
         orig*: string
