@@ -53,17 +53,14 @@ const
     
 let discord = newDiscordClient(token)
 
-proc reply(m: Message, content: string) {.async, inline.} =
-    discard await discord.api.sendMessage(m.channelId, content)
+template reply(m: Message, content: string, messageEmbed: Option[Embed] = none(Embed)): untyped =
+    discard await discord.api.sendMessage(m.channelId, content, embed = messageEmbed)
 
 proc trunc(s: string, length: int): string =
     # TODO paginiation
     if s.len() > length:
         return s[0..<length] & "(click link below to see full version)"
-    return s
-    
-proc reply(m: Message, embed: Option[Embed]) {.async, inline.} =
-    discard await discord.api.sendMessage(m.channelId, embed = embed)
+    return s    
 
 discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
     # try:
@@ -73,7 +70,7 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
         # TODO search
         if args[0] == "doc":
             if args.len() == 1:
-                await m.reply("You have not specified a name")
+                m.reply("You have not specified a name")
             else:
                 let name = args[1].toLower()
                 if docTable.hasKey(name):
@@ -86,16 +83,14 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
                             description: entry.description,
                             url: some fmt"https://github.com/krisppurg/dimscord/blob/{dimscordVersion}/{entry.file.get()}#L{entry.line}"
                         )
-                        discard await discord.api.sendMessage(m.channelId, &"```nim\n{entry.code.trunc(1500)}```", embed = embed)
+                        m.reply(&"```nim\n{entry.code.trunc(1500)}```", embed)
 
                     else:
-                        await m.reply(&"```nim\n{entry.code.trunc(1500)}```")
+                        m.reply(&"```nim\n{entry.code.trunc(1500)}```")
                 else:
-                    await m.reply("I'm sorry, but there is nothing with this name")
-    # except:
-        # echo("werror")
+                    m.reply("I'm sorry, but there is nothing with this name")
+
 discord.events.on_ready = proc (s: Shard, r: Ready) {.async.} =
     echo "Ready as " & $r.user
-    echo genInviteLink(r.user.id)
     
 waitFor discord.startSession()
