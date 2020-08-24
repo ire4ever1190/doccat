@@ -47,13 +47,17 @@ else:
     else:
         const token = TOKEN
         
-const docTable = buildDocTable()
+const 
+    docTable = buildDocTable()
+    dimscordVersion = readFile("dimscord/version")
+    
 let discord = newDiscordClient(token)
 
 proc reply(m: Message, content: string) {.async, inline.} =
     discard await discord.api.sendMessage(m.channelId, content)
 
 proc trunc(s: string, length: int): string =
+    # TODO paginiation
     if s.len() > length:
         return s[0..<length] & "(click link below to see full version)"
     return s
@@ -63,9 +67,10 @@ proc reply(m: Message, embed: Option[Embed]) {.async, inline.} =
 
 discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
     # try:
-        if m.author.bot: return
+        if m.author.bot and not m.webhookId.isSome(): return
         let args = m.content.split(" ")
         if args.len() == 0: return
+        # TODO search
         if args[0] == "doc":
             if args.len() == 1:
                 await m.reply("You have not specified a name")
@@ -79,7 +84,7 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
                         let embed = some Embed(
                             title: some entry.name,
                             description: entry.description,
-                            url: some fmt"https://github.com/krisppurg/dimscord/blob/{DIMSCORD_VERSION}/{entry.file.get()}#L{entry.line}"
+                            url: some fmt"https://github.com/krisppurg/dimscord/blob/{dimscordVersion}/{entry.file.get()}#L{entry.line}"
                         )
                         discard await discord.api.sendMessage(m.channelId, &"```nim\n{entry.code.trunc(1500)}```", embed = embed)
 

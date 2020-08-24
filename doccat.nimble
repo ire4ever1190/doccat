@@ -33,3 +33,5 @@ task genDoc, "Generates the JSON documentation files":
     cd("dimscord")
     exec("nim jsondoc --project --git.url:https://github.com/krisppurg/dimscord dimscord.nim")
 
+task release, "Builds a release binary":
+    exec("nim c --outdir:build/ -d:danger src/doccat.nim")
