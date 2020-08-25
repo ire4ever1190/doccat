@@ -61,7 +61,7 @@ proc trunc(s: string, length: int, page: int = 0): string =
     if s.len() > length:
         var wordEnd = length * (page + 1)
         if wordEnd > s.len(): wordEnd = s.len()
-        return s[(page * length) + (if page > 0: -5 else: 0)..<wordEnd] & (if wordEnd < s.len(): "(click link below to see full version)" else: "")
+        return s[(page * length) + (if page > 0: -5 else: 0)..<wordEnd] & (if wordEnd < s.len(): fmt" ( run command again with `{page + 1}` at the end to get more)" else: "")
     return s    
 
 discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
@@ -76,6 +76,7 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
             let name = args[1].toLower()
             if name == "help":
                 m.reply("to use, just send `doc` followed by something in the library e.g. `doc sendMessage`\nFor big things like `doc Events` you can tack a number onto the end to get more `doc Events 2`")
+                return
             var page = 0
             if args.len() >= 3:
                 page = abs(parseInt(args[2]) - 1)
