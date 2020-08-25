@@ -1,3 +1,4 @@
+import math
 import dimscord
 import asyncdispatch
 import config
@@ -55,10 +56,12 @@ let discord = newDiscordClient(token)
 template reply(m: Message, content: string, messageEmbed: Option[Embed] = none(Embed)): untyped =
     discard await discord.api.sendMessage(m.channelId, content, embed = messageEmbed)
 
-proc trunc(s: string, length: int): string =
+proc trunc(s: string, length: int, page: int = 0): string =
     # TODO paginiation
     if s.len() > length:
-        return s[0..<length] & "(click link below to see full version)"
+        var wordEnd = length * (page + 1)
+        if wordEnd > s.len(): wordEnd = s.len()
+        return s[(page * length) + (if page > 0: -5 else: 0)..<wordEnd] & (if wordEnd < s.len(): "(click link below to see full version)" else: "")
     return s    
 
 discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
@@ -66,11 +69,16 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
     let args = m.content.split(" ")
     if args.len() == 0: return
     # TODO search
-    if args[0] == "doc":
+    if unlikely(args[0] == "doc"):
         if args.len() == 1:
             m.reply("You have not specified a name")
         else:
             let name = args[1].toLower()
+            if name == "help":
+                m.reply("to use, just send `doc` followed by something in the library e.g. `doc sendMessage`\nFor big things like `doc Events` you can tack a number onto the end to get more `doc Events 2`")
+            var page = 0
+            if args.len() >= 3:
+                page = abs(parseInt(args[2]) - 1)
             if docTable.hasKey(name):
                 let entry = docTable[name]
                     
@@ -81,13 +89,12 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
                         description: entry.description,
                         url: some fmt"https://github.com/krisppurg/dimscord/blob/{dimscordVersion}/{entry.file.get()}#L{entry.line}"
                     )
-                    m.reply(&"```nim\n{entry.code.trunc(1500)}```", embed)
+                    m.reply(&"```nim\n{entry.code.trunc(1500, page)}```", embed)
     
                 else:
-                    m.reply(&"```nim\n{entry.code.trunc(1500)}```")
+                    m.reply(&"```nim\n{entry.code.trunc(1500, page)}```")
             else:
                 m.reply("I'm sorry, but there is nothing with this name")
-
 discord.events.on_ready = proc (s: Shard, r: Ready) {.async.} =
     echo "Ready as " & $r.user
     
