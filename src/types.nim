@@ -20,6 +20,7 @@ type
         # signature*: Option[Signature]
         
     JsonDoc* = object
+        isProcessed*: Option[bool]
         orig*: string
         nimble*: string
         moduleDescription*: string

@@ -31,7 +31,11 @@ task pull, "Pulls files from dimscord":
 task genDoc, "Generates the JSON documentation files":
     pullTask()
     cd("dimscord")
-    exec("nim jsondoc --project --git.url:https://github.com/krisppurg/dimscord dimscord.nim")
+    exec("nim jsondoc --outdir:jsondocs/ --project --git.url:https://github.com/krisppurg/dimscord dimscord.nim")
+
+task clean, "Cleans old files":
+    rmDir("dimscord")
+    rmFile("version")
 
 task release, "Builds a release binary":
     exec("nim c --outdir:build/ -d:danger src/doccat.nim")

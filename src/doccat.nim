@@ -26,19 +26,23 @@ proc buildDocTable(): Table[string, Entry] =
             let json = parseJson(readFile(path))
             var docObj = json.to(JsonDoc)
             for entry in docObj.entries:
-                if entry.description.isSome:
-                    var description = entry.description.unsafeAddr
-                    description[] = some description[].get()
-                            .replace(ulRegex, "$1")
-                            .replace(liRegex, "\n - $1")
-                            .replace(singleLineCodeRegex, "`$1`")
-                            .replace("&quot;", "\"") 
-                            .replace(aRegex, "[$2]($1)")
-                            .replace(pRegex, "$1")
-                var entryFile = entry.file.unsafeAddr
-                entryFile[] = some(path.replace("dimscord/dimscord/", "dimscord/").replace(".json", ".nim"))
-
+                if docObj.isProcessed.isNone: # Check if has been processed before
+                    if entry.description.isSome:
+                        var description = entry.description.unsafeAddr
+                        description[] = some description[].get()
+                                .replace(ulRegex, "$1")
+                                .replace(liRegex, "\n - $1")
+                                .replace(singleLineCodeRegex, "`$1`")
+                                .replace("&quot;", "\"") 
+                                .replace(aRegex, "[$2]($1)")
+                                .replace(pRegex, "$1")
+                    var entryFile = entry.file.unsafeAddr
+                    entryFile[] = some(path.replace("dimscord/dimscord/", "dimscord/").replace(".json", ".nim"))
                 result[entry.name.toLower()] = entry
+            # Cache object so it does not need to be processed again
+            if docObj.isProcessed.isNone:
+                docObj.isProcessed = some true
+                writeFile(path, $ %*docObj)
 
 when defined(release):
     const token = TOKEN
@@ -63,10 +67,8 @@ proc trunc(s: string, length: int, page: int = 0): string =
     if s.len() > length:
         var wordEnd = length * (page + 1)
         if wordEnd > s.len(): wordEnd = s.len()
-        return s[(page * length) + (if page > 0: -5 else: 0)..<wordEnd]
+        return s[(page * length) + (if page > 0: -5 else: 0)..<wordEnd] & (if wordEnd < s.len(): "..." else: "")
     return s    
-
-
 
 discord.events.onDispatch = proc (s: Shard, evt: string, data: JsonNode) {.async.} =
     if evt == "MESSAGE_REACTION_ADD":
