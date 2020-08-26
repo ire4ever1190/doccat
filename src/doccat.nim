@@ -12,13 +12,14 @@ import options
 import strformat
 import wait
 
+# TODO switch to database, should fix memory leak
 proc buildDocTable(): Table[string, Entry] =
     # HTML to markdown regex
     let ulRegex = re"<ul class=.simple.>\n?([\W\s\w]+)\n?<\/ul>" # Start of list
     let liRegex = re"<li>(.*)</li>" # List item
     let singleLineCodeRegex = re"<tt class=.docutils literal.><span class=.pre.>([^<]+)<\/span><\/tt>" # Code example html
-    let aRegex = re"<a class=.[\w ]+. href=.([^<]+).>([^<]+)<\/a>"
-    let pRegex = re"<p>([\W\s\w]+)</p>"
+    let aRegex = re"<a class=.[\w ]+. href=.([^<]+).>([^<]+)<\/a>" # Link
+    let pRegex = re"<p>([\W\s\w]+)</p>" # paragraph
     
     for kind, path in walkDir("dimscord/dimscord"):
         if path.endsWith(".json"):
@@ -91,26 +92,26 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
             if name == "help":
                 discard m.reply("to use, just send `doc` followed by something in the library e.g. `doc sendMessage`\nFor big things like `doc Events` you can tack a number onto the end to get more `doc Events 2`")
                 return
-            var page = 0
-            
-            if args.len() >= 3:
-                page = abs(parseInt(args[2]) - 1)
+            var page = if args.len() >= 3: abs(parseInt(args[2]) - 1) else: 0
+
             if docTable.hasKey(name):
                 let entry = docTable[name]
-                var maxPage = int ceil(len(entry.code)/1500)
                 var 
+                    maxPage = int ceil(len(entry.code)/1500)
                     responseMessage: Message
-                echo(maxPage, page)
+                    embed = none(Embed)
+
                 if entry.description.isSome:
-                    let description = entry.description.get()
-                    let embed = some Embed(
-                    title: some entry.name,
+                    embed = some Embed(
+                        title: some entry.name,
                         description: entry.description,
                         url: some fmt"https://github.com/krisppurg/dimscord/blob/{dimscordVersion}/{entry.file.get()}#L{entry.line}"
                     )
-                    responseMessage = await m.reply(&"```nim\n{entry.code.trunc(1500, page)}```", embed)
-                else:
-                    responseMessage = await m.reply(&"```nim\n{entry.code.trunc(1500, page)}```")
+                        
+                responseMessage = await m.reply(&"```nim\n{entry.code.trunc(1500, page)}```", embed)
+                # 
+                # Below this is the handling for the page turning
+                #
                 if entry.code.len > 1500:
                     while true:
                         if page > 0:
@@ -119,29 +120,27 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
                             await discord.api.addMessageReaction(m.channelId, responseMessage.id, forwardEmoji)
                         let reaction = await responseMessage.waitForReaction()
                         if reaction == backEmoji:
-                            if page != 0:
+                            if page != 0: # Check that you are not on the first page
                                 page -= 1
+
                         elif reaction == forwardEmoji:
-                            if page + 1 < maxPage:
+                            if page + 1 < maxPage: # Check that you are not on the last page
                                 page += 1
+
                         elif reaction.isEmptyOrWhiteSpace: # Emojis make it blank
-                            echo("timed out")
                             return
+                            
                         if entry.description.isSome:
-                            let description = entry.description.get()
-                            let embed = some Embed(
-                            title: some entry.name,
+                            embed = some Embed(
+                                title: some entry.name,
                                 description: entry.description,
                                 url: some fmt"https://github.com/krisppurg/dimscord/blob/{dimscordVersion}/{entry.file.get()}#L{entry.line}"
-                            )
-                            discard await discord.api.editMessage(responseMessage.channelId, responseMessage.id, &"```nim\n{entry.code.trunc(1500, page)}```", embed = embed)                                
-                        else:
-                            discard await discord.api.editMessage(responseMessage.channelId, responseMessage.id, &"```nim\n{entry.code.trunc(1500, page)}```")
+                            )                        
+                        discard await discord.api.editMessage(responseMessage.channelId, responseMessage.id, &"```nim\n{entry.code.trunc(1500, page)}```", embed = embed)
                         try:
                             await discord.api.deleteAllMessageReactions(m.channelId, responseMessage.id)
                         except:
                             echo("no permission")
-                            # discard await m.reply("I don't have permission to manage messages")
             else:
                 discard m.reply("I'm sorry, but there is nothing with this name")
 discord.events.on_ready = proc (s: Shard, r: Ready) {.async.} =
