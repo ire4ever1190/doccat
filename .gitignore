@@ -5,3 +5,4 @@ src/doccat
 *.config
 version
 jsondocs
+*.db

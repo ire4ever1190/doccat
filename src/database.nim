@@ -1,0 +1,69 @@
+import os
+import json
+import types
+import regex
+import options
+import strutils
+import strformat
+import db_sqlite
+
+const 
+    dimscordVersion = readFile("dimscord/version")
+
+let db* = open("docs.db", "", "", "")
+
+type DbEntry* = object
+    name*: string
+    url*: string
+    code*: string
+    description*: string
+
+proc createTables() =
+    db.exec(sql"CREATE VIRTUAL TABLE IF NOT EXISTS doc USING FTS5(name, url, code, description)")
+
+proc getEntry*(name: string): Option[DbEntry] =
+    let data = db.getRow(sql"SELECT * FROM doc WHERE name = ? COLLATE NOCASE", name)
+    if data != @["", "", "", ""]:
+        return some DbEntry(
+            name: data[0],
+            url: data[1],
+            code: data[2],
+            description: data[3]
+        )
+    return none(DbEntry)
+
+proc buildDocTable() =
+    # HTML to markdown regex
+    let ulRegex = re"<ul class=.simple.>\n?([\W\s\w]+)\n?<\/ul>" # Start of list
+    let liRegex = re"<li>(.*)</li>" # List item
+    let singleLineCodeRegex = re"<tt class=.docutils literal.><span class=.pre.>([^<]+)<\/span><\/tt>" # Code example html
+    let aRegex = re"<a class=.[\w ]+. href=.([^<]+).>([^<]+)<\/a>" # Link
+    let pRegex = re"<p>([\W\s\w]+)</p>" # paragraph
+    
+    for kind, path in walkDir("dimscord/dimscord"):
+        if path.endsWith(".json"):
+            echo(path)
+            let json = parseJson(readFile(path))
+            var docObj = json.to(JsonDoc)
+            for entry in docObj.entries:
+                if entry.description.isSome:
+                    var description = entry.description.unsafeAddr
+                    description[] = some description[].get()
+                            .replace(ulRegex, "$1")
+                            .replace(liRegex, "\n - $1")
+                            .replace(singleLineCodeRegex, "`$1`")
+                            .replace("&quot;", "\"") 
+                            .replace(aRegex, "[$2]($1)")
+                            .replace(pRegex, "$1")
+                var entryFile = entry.file.unsafeAddr
+                entryFile[] = some(path.replace("dimscord/dimscord/", "dimscord/").replace(".json", ".nim"))
+                db.exec(sql"INSERT INTO doc VALUES (?, ?, ?, ?)",
+                    entry.name,
+                    fmt"https://github.com/krisppurg/dimscord/blob/{dimscordVersion}/{entry.file.get()}#L{entry.line}",
+                    entry.code,
+                    if entry.description.isSome: entry.description.get() else: "" 
+                )
+when isMainModule:
+    createTables()
+    buildDocTable()
+    db.close()

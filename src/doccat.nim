@@ -11,40 +11,9 @@ import tables
 import options
 import strformat
 import wait
+import database
 
 # TODO switch to database, should fix memory leak
-proc buildDocTable(): Table[string, Entry] =
-    # HTML to markdown regex
-    let ulRegex = re"<ul class=.simple.>\n?([\W\s\w]+)\n?<\/ul>" # Start of list
-    let liRegex = re"<li>(.*)</li>" # List item
-    let singleLineCodeRegex = re"<tt class=.docutils literal.><span class=.pre.>([^<]+)<\/span><\/tt>" # Code example html
-    let aRegex = re"<a class=.[\w ]+. href=.([^<]+).>([^<]+)<\/a>" # Link
-    let pRegex = re"<p>([\W\s\w]+)</p>" # paragraph
-    
-    for kind, path in walkDir("dimscord/dimscord"):
-        if path.endsWith(".json"):
-            echo(path)
-            let json = parseJson(readFile(path))
-            var docObj = json.to(JsonDoc)
-            for entry in docObj.entries:
-                if docObj.isProcessed.isNone: # Check if has been processed before
-                    if entry.description.isSome:
-                        var description = entry.description.unsafeAddr
-                        description[] = some description[].get()
-                                .replace(ulRegex, "$1")
-                                .replace(liRegex, "\n - $1")
-                                .replace(singleLineCodeRegex, "`$1`")
-                                .replace("&quot;", "\"") 
-                                .replace(aRegex, "[$2]($1)")
-                                .replace(pRegex, "$1")
-                    var entryFile = entry.file.unsafeAddr
-                    entryFile[] = some(path.replace("dimscord/dimscord/", "dimscord/").replace(".json", ".nim"))
-                result[entry.name.toLower()] = entry
-            # Cache object so it does not need to be processed again
-            if docObj.isProcessed.isNone:
-                docObj.isProcessed = some true
-                writeFile(path, $ %*docObj)
-
 when defined(release):
     const token = TOKEN
 else:
@@ -54,10 +23,9 @@ else:
         const token = TOKEN
         
 const 
-    docTable = buildDocTable()
-    dimscordVersion = readFile("dimscord/version")
     forwardEmoji = "➡️"
     backEmoji = "⬅️"
+
 let discord = newDiscordClient(token)
 
 proc reply(m: Message, content: string, messageEmbed: Option[Embed] = none(Embed)): Future[Message] {.async.}=
@@ -88,27 +56,24 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
         if args.len() == 1:
             discard m.reply("You have not specified a name")
         else:
-            let name = args[1].toLower()
+            let name = args[1]
             if name == "help":
                 discard m.reply("to use, just send `doc` followed by something in the library e.g. `doc sendMessage`\nFor big things like `doc Events` you can tack a number onto the end to get more `doc Events 2`")
                 return
             var page = if args.len() >= 3: abs(parseInt(args[2]) - 1) else: 0
 
-            if docTable.hasKey(name):
-                let entry = docTable[name]
-                var 
+            let dbEntry = getEntry(name)
+            if dbEntry.isSome:
+                let
+                    entry = dbEntry.get() 
                     maxPage = int ceil(len(entry.code)/1500)
-                    responseMessage: Message
-                    embed = none(Embed)
-
-                if entry.description.isSome:
-                    embed = some Embed(
+                var embed = some Embed(
                         title: some entry.name,
-                        description: entry.description,
-                        url: some fmt"https://github.com/krisppurg/dimscord/blob/{dimscordVersion}/{entry.file.get()}#L{entry.line}"
+                        description: some entry.description,
+                        url: some entry.url
                     )
                         
-                responseMessage = await m.reply(&"```nim\n{entry.code.trunc(1500, page)}```", embed)
+                var responseMessage = await m.reply(&"```nim\n{entry.code.trunc(1500, page)}```", embed)
                 # 
                 # Below this is the handling for the page turning
                 #
@@ -130,11 +95,10 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
                         elif reaction.isEmptyOrWhiteSpace: # Emojis make it blank
                             return
                             
-                        if entry.description.isSome:
-                            embed = some Embed(
+                        embed = some Embed(
                                 title: some entry.name,
-                                description: entry.description,
-                                url: some fmt"https://github.com/krisppurg/dimscord/blob/{dimscordVersion}/{entry.file.get()}#L{entry.line}"
+                                description: some entry.description,
+                                url: some entry.url
                             )                        
                         discard await discord.api.editMessage(responseMessage.channelId, responseMessage.id, &"```nim\n{entry.code.trunc(1500, page)}```", embed = embed)
                         try:
