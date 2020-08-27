@@ -49,3 +49,4 @@ task clean, "Cleans old files":
 
 task release, "Builds a release binary":
     exec("nim c --outdir:build/ -d:danger src/doccat.nim")
+    cpFile("docs.db", "build/docs.db")

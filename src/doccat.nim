@@ -51,7 +51,6 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
     if m.author.bot and not m.webhookId.isSome(): return
     let args = m.content.split(" ")
     if args.len() == 0: return
-    # TODO search
     if unlikely(args[0] == "doc"):
         if args.len() == 1:
             discard m.reply("You have not specified a name")
@@ -60,8 +59,19 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
             if name == "help":
                 discard m.reply("to use, just send `doc` followed by something in the library e.g. `doc sendMessage`\nFor big things like `doc Events` you can tack a number onto the end to get more `doc Events 2`")
                 return
-            var page = if args.len() >= 3: abs(parseInt(args[2]) - 1) else: 0
-
+            elif name == "search" and args.len() >= 3:
+                var msg = ""
+                for entry in searchEntry(args[2]):
+                    msg &= entry.name & "\n"
+                discard m.reply(msg)
+                return
+            var page = 0
+            try:
+                page = if args.len() >= 3: abs(parseInt(args[2]) - 1) else: 0
+            except:
+                discard m.reply("that is not a number")
+                return
+                
             let dbEntry = getEntry(name)
             if dbEntry.isSome:
                 let

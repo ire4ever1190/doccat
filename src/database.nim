@@ -9,7 +9,8 @@ import db_sqlite
 
 const 
     dimscordVersion = readFile("dimscord/version")
-
+    unnotationRe = (re"(\w)([A-Z])", "$1 $2")
+    
 let db* = open("docs.db", "", "", "")
 
 type DbEntry* = object
@@ -21,16 +22,27 @@ type DbEntry* = object
 proc createTables() =
     db.exec(sql"CREATE VIRTUAL TABLE IF NOT EXISTS doc USING FTS5(name, url, code, description)")
 
+proc unnotation(input: string): string {.inline.} = input.replace(unnotationRe[0], unnotationRe[1])
+
 proc getEntry*(name: string): Option[DbEntry] =
-    let data = db.getRow(sql"SELECT * FROM doc WHERE name = ? COLLATE NOCASE", name)
+    let data = db.getRow(sql"SELECT * FROM doc WHERE name = ? COLLATE NOCASE", name.unnotation())
     if data != @["", "", "", ""]:
         return some DbEntry(
-            name: data[0],
+            name: data[0].split(" ").join(""),
             url: data[1],
             code: data[2],
             description: data[3]
         )
     return none(DbEntry)
+
+proc searchEntry*(name: string): seq[DbEntry] =
+    for data in db.fastRows(sql"SELECT * FROM doc WHERE doc MATCH ? ORDER BY rank", name.unnotation()):
+        result.add DbEntry(
+                    name: data[0].split(" ").join(""),
+                    url: data[1],
+                    code: data[2],
+                    description: data[3]
+                )
 
 proc buildDocTable() =
     # HTML to markdown regex
@@ -58,7 +70,7 @@ proc buildDocTable() =
                 var entryFile = entry.file.unsafeAddr
                 entryFile[] = some(path.replace("dimscord/dimscord/", "dimscord/").replace(".json", ".nim"))
                 db.exec(sql"INSERT INTO doc VALUES (?, ?, ?, ?)",
-                    entry.name,
+                    entry.name.unnotation(), # Splitting into words allows better searching
                     fmt"https://github.com/krisppurg/dimscord/blob/{dimscordVersion}/{entry.file.get()}#L{entry.line}",
                     entry.code,
                     if entry.description.isSome: entry.description.get() else: "" 
