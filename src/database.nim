@@ -20,13 +20,13 @@ type DbEntry* = object
     description*: string
 
 proc createTables() =
-    db.exec(sql"CREATE VIRTUAL TABLE IF NOT EXISTS doc USING FTS5(name, url, code, description)")
+    db.exec(sql"CREATE VIRTUAL TABLE IF NOT EXISTS doc USING FTS5(name, url, code, description, searchName)")
 
 proc unnotation(input: string): string {.inline.} = input.replace(unnotationRe[0], unnotationRe[1])
 
 proc getEntry*(name: string): Option[DbEntry] =
-    let data = db.getRow(sql"SELECT * FROM doc WHERE name = ? COLLATE NOCASE", name.unnotation())
-    if data != @["", "", "", ""]:
+    let data = db.getRow(sql"SELECT * FROM doc WHERE name = ? COLLATE NOCASE", name)
+    if data != @["", "", "", "", ""]:
         return some DbEntry(
             name: data[0].split(" ").join(""),
             url: data[1],
@@ -36,7 +36,7 @@ proc getEntry*(name: string): Option[DbEntry] =
     return none(DbEntry)
 
 proc searchEntry*(name: string): seq[DbEntry] =
-    for data in db.fastRows(sql"SELECT * FROM doc WHERE doc MATCH ? ORDER BY rank", name.unnotation()):
+    for data in db.fastRows(sql"SELECT * FROM doc WHERE doc MATCH ? ORDER BY rank", name):
         result.add DbEntry(
                     name: data[0].split(" ").join(""),
                     url: data[1],
@@ -69,11 +69,12 @@ proc buildDocTable() =
                             .replace(pRegex, "$1")
                 var entryFile = entry.file.unsafeAddr
                 entryFile[] = some(path.replace("dimscord/dimscord/", "dimscord/").replace(".json", ".nim"))
-                db.exec(sql"INSERT INTO doc VALUES (?, ?, ?, ?)",
-                    entry.name.unnotation(), # Splitting into words allows better searching
+                db.exec(sql"INSERT INTO doc VALUES (?, ?, ?, ?, ?)",
+                    entry.name,
                     fmt"https://github.com/krisppurg/dimscord/blob/{dimscordVersion}/{entry.file.get()}#L{entry.line}",
                     entry.code,
-                    if entry.description.isSome: entry.description.get() else: "" 
+                    if entry.description.isSome: entry.description.get() else: "",
+                    entry.name.unnotation() # Used so the user can search by name
                 )
 when isMainModule:
     createTables()
