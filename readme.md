@@ -7,4 +7,4 @@ To use, create a file called config.json and put this in int
 }
 ```
 
-don't forget to run `nimble genDoc` first
+don't forget to run `nimble genDb` first
