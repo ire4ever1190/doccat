@@ -13,7 +13,6 @@ import strformat
 import wait
 import database
 
-# TODO switch to database, should fix memory leak
 when defined(release):
     const token = TOKEN
 else:
@@ -61,7 +60,7 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
                 return
             elif name == "search" and args.len() >= 3:
                 var msg = ""
-                for entry in searchEntry(args[2]):
+                for entry in searchEntry(args[2..<len(args)].join(" ")):
                     msg &= entry.name & "\n"
                 discard m.reply(msg)
                 return
@@ -120,4 +119,4 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
 discord.events.on_ready = proc (s: Shard, r: Ready) {.async.} =
     echo "Ready as " & $r.user
     
-waitFor discord.startSession()
+waitFor discord.startSession(guildSubscriptions = false)
