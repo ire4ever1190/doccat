@@ -49,14 +49,13 @@ discord.events.onDispatch = proc (s: Shard, evt: string, data: JsonNode) {.async
 
 discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
     if m.author.bot and not m.webhookId.isSome(): return
-    let args = m.content.split(" ")
+    let args = m.content.toLowerAscii().split(" ")
     if args.len() == 0: return
     if unlikely(args[0] == "doc"):
         if args.len() == 1:
             discard m.reply("You have not specified a name")
         else:
             let name = args[1]
-            echo(args)
             if name == "help":
                 discard m.reply("to use, just send `doc` followed by something in the library e.g. `doc sendMessage`\nFor big things like `doc Events` you can tack a number onto the end to get more `doc Events 2`")
                 return
