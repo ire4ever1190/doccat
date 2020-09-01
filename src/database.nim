@@ -9,7 +9,7 @@ import db_sqlite
 
 const 
     dimscordVersion = readFile("dimscord/version")
-    unnotationRe = (re"(\w)([A-Z])", "$1 $2")
+    unnotationRe = (re"(\w)([A-Z])", "$1 $2") # sendMessage -> send Message
     
 let db* = open("docs.db", "", "", "")
 
@@ -45,6 +45,9 @@ proc searchEntry*(name: string): seq[DbEntry] =
                 )
 
 proc buildDocTable() =
+    ## gets all the documentation that is in json repr
+    ## converts the html to markdown, and the  adds to
+    ## the database
     # HTML to markdown regex
     let ulRegex = re"<ul class=.simple.>\n?([\W\s\w]+)\n?<\/ul>" # Start of list
     let liRegex = re"<li>(.*)</li>" # List item
@@ -54,7 +57,6 @@ proc buildDocTable() =
     
     for kind, path in walkDir("dimscord/dimscord"):
         if path.endsWith(".json"):
-            echo(path)
             let json = parseJson(readFile(path))
             var docObj = json.to(JsonDoc)
             for entry in docObj.entries:
@@ -76,6 +78,7 @@ proc buildDocTable() =
                     if entry.description.isSome: entry.description.get() else: "",
                     entry.name.unnotation() # Used so the user can search by name
                 )
+                
 when isMainModule:
     createTables()
     buildDocTable()
