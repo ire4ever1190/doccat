@@ -20,6 +20,5 @@ proc waitForReaction*(m: Message): Future[string] =
     
     # Waits for a certain emoji to be responded
     waits[m.id] = result
-    echo($waits.len())
     return result
                                                                                 
