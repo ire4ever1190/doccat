@@ -47,6 +47,8 @@ discord.events.onDispatch = proc (s: Shard, evt: string, data: JsonNode) {.async
             wait.complete(data["emoji"]["name"].str)
             waits.del(data["message_id"].str)
 
+discord.events.on_disconnect = proc (s: Shard) {.async.} = discard
+
 discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
     if m.author.bot and not m.webhookId.isSome(): return
     let args = m.content.toLowerAscii().split(" ")
