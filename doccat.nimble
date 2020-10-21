@@ -14,7 +14,6 @@ bin           = @["doccat"]
 requires "nim >= 1.2.0"
 requires "dimscord"
 requires "regex == 0.16.2"
-requires "allographer == 0.13.1"
 
 task pull, "Pulls files from dimscord":
     if existsDir("dimscord"):
