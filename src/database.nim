@@ -80,6 +80,7 @@ proc buildDocTable() =
                 )
                 
 when isMainModule:
+    echo("Building docs with " & dimscordVersion)
     createTables()
     buildDocTable()
     db.close()

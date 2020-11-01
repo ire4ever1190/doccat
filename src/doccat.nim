@@ -116,4 +116,8 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
 discord.events.on_ready = proc (s: Shard, r: Ready) {.async.} =
     echo "Ready as " & $r.user
     
-waitFor discord.startSession(guildSubscriptions = false)
+const intents = {
+    giGuildMessages,
+    giGuildMessageReactions
+}
+waitFor discord.startSession(guildSubscriptions = false, intents)

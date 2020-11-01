@@ -12,7 +12,7 @@ bin           = @["doccat"]
 # Dependencies
 
 requires "nim >= 1.2.0"
-requires "dimscord"
+requires "dimscord#head"
 requires "regex == 0.16.2"
 requires "allographer == 0.13.1"
 
@@ -47,6 +47,8 @@ task clean, "Cleans old files":
     rmFile("db.sqlite3")
     rmFile("docs.db")
 
-task release, "Builds a release binary":
+task release, "Runs all the needed tasks and builds the release binary":
+    cleanTask()
+    genDBTask()
     exec("nim c --outdir:build/ -d:danger src/doccat.nim")
-    cpFile("docs.db", "build/docs.db")
+    mvFile("docs.db", "build/docs.db")
