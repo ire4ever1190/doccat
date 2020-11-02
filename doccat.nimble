@@ -45,6 +45,7 @@ task clean, "Cleans old files":
     rmFile("version")
     rmFile("db.sqlite3")
     rmFile("docs.db")
+    rmFile("src/database")
 
 task release, "Runs all the needed tasks and builds the release binary":
     cleanTask()
