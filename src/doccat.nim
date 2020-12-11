@@ -6,8 +6,6 @@ import config
 import strutils
 import os
 import json
-import types
-import regex
 import tables
 import options
 import strformat
@@ -32,12 +30,17 @@ proc reply(m: Message, content: string, messageEmbed: Option[Embed] = none(Embed
     return await discord.api.sendMessage(m.channelId, content, embed = messageEmbed)
 
 proc trunc(s: string, length: int, page: int = 0): string =
-    # TODO paginiation
     if s.len() > length:
-        var wordEnd = length * (page + 1)
-        if wordEnd > s.len(): wordEnd = s.len()
-        return s[(page * length) + (if page > 0: -5 else: 0)..<wordEnd] & (if wordEnd < s.len(): "..." else: "")
-    return s    
+        var wordEnd = length * (page + 1) # Make the end be the specified length but n + 1 pages in
+        if wordEnd > s.len(): # If the end is bigger than the string
+            wordEnd = s.len() # Make the end be the length of the string
+        # Return the string data between the n pages in and n + 1 pages in
+        # If there is still some remaining text then add '...'
+        result =  s[(page * length) + (if page > 0: -5 else: 0)..<wordEnd] & (if wordEnd < s.len(): "..." else: "")  
+        if wordEnd < s.len():
+            result &= ""
+    else:
+        result = s
 
 discord.events.onDispatch = proc (s: Shard, evt: string, data: JsonNode) {.async.} =
     if evt == "MESSAGE_REACTION_ADD":
@@ -46,8 +49,6 @@ discord.events.onDispatch = proc (s: Shard, evt: string, data: JsonNode) {.async
             let wait = waits[data["message_id"].str]
             wait.complete(data["emoji"]["name"].str)
             waits.del(data["message_id"].str)
-
-discord.events.on_disconnect = proc (s: Shard) {.async.} = discard
 
 discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
     if m.author.bot and not m.webhookId.isSome(): return
