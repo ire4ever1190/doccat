@@ -13,9 +13,8 @@ bin           = @["doccat"]
 # Dependencies
 
 requires "nim >= 1.2.0"
-requires "dimscord#head"
-requires "dimscmd >= 0.2.1"
-requires "flatty" # Hey krisp, you dropped this
+requires "dimscord >= 1.2.4"
+requires "dimscmd#head"
 
 task pull, "Pulls files from dimscord":
     if existsDir "dimscord":
@@ -24,11 +23,11 @@ task pull, "Pulls files from dimscord":
     else:
         exec "git clone https://github.com/krisppurg/dimscord"
         cd "dimscord"
-    let latestRelease = gorge("git --git-dir dimscord/.git describe --tags", cache="test").split("-")[0]
+    let latestRelease = gorge("git --git-dir dimscord/.git describe --tags", cache="").split("-")[0]
     echo latestRelease
     writeFile("version", latestRelease)
     exec "git checkout " & latestRelease
-    cd ".."
+    cd thisDir()
 
 task genDoc, "Generates the JSON documentation files":
     cd thisDir()

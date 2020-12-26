@@ -9,6 +9,7 @@ import json
 import tables
 import options
 import strformat
+import dimscmd
 import wait
 import database
 
@@ -19,8 +20,8 @@ else:
         const token = TESTING_TOKEN
     else:
         const token = TOKEN
-        
-const 
+
+const
     forwardEmoji = "➡️"
     backEmoji = "⬅️"
 
@@ -36,7 +37,7 @@ proc trunc(s: string, length: int, page: int = 0): string =
             wordEnd = s.len() # Make the end be the length of the string
         # Return the string data between the n pages in and n + 1 pages in
         # If there is still some remaining text then add '...'
-        result =  s[(page * length) + (if page > 0: -5 else: 0)..<wordEnd] & (if wordEnd < s.len(): "..." else: "")  
+        result =  s[(page * length) + (if page > 0: -5 else: 0)..<wordEnd] & (if wordEnd < s.len(): "..." else: "")
         if wordEnd < s.len():
             result &= ""
     else:
@@ -50,63 +51,56 @@ discord.events.onDispatch = proc (s: Shard, evt: string, data: JsonNode) {.async
             wait.complete(data["emoji"]["name"].str)
             waits.del(data["message_id"].str)
 
-discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
-    if m.author.bot and not m.webhookId.isSome(): return
-    let args = m.content.toLowerAscii().split(" ")
-    if args.len() == 0: return
-    if unlikely(args[0] == "doc"):
-        if args.len() == 1:
-            discard m.reply("You have not specified a name")
-        else:
-            let name = args[1]
-            if name == "help":
-                discard m.reply("to use, just send `doc` followed by something in the library e.g. `doc sendMessage`\nFor big things like `doc Events` you can tack a number onto the end to get more `doc Events 2`")
-                return
-            elif name == "search" and args.len() >= 3:
-                var msg = ""
-                for entry in searchEntry(args[2..<len(args)].join(" ")):
-                    msg &= entry.name & "\n"
-                discard m.reply(msg)
-                return
-            var page = 0
+proc search() {.ncommand("docsearch").} =
+    var msg = ""
+    for entry in searchEntry(cmdInput):
+        msg &= entry.name & "\n"
+    discard m.reply(msg)
+
+proc getDocumentation(name: string) {.ncommand("doc").} =
+    case name
+        of "help":
+            discard m.reply("to use, just send `doc` followed by something in the library e.g. `doc sendMessage`\nFor big things like `doc Events` you can switch between the pages using the emojis")
+            break
+        else: # They have specified something to get the documentation for
             let dbEntry = getEntry(name)
             if dbEntry.isSome:
                 let
-                    entry = dbEntry.get() 
+                    entry = dbEntry.get()
                     maxPage = int ceil(len(entry.code)/1500)
-                var embed = some Embed(
+
+                var
+                    page = 0
+                    embed = some Embed(
                         title: some entry.name,
                         description: some entry.description,
                         url: some entry.url
                     )
-                        
-                var responseMessage = await m.reply(&"```nim\n{entry.code.trunc(1500, page)}```", embed)
-                # 
-                # Below this is the handling for the page turning
-                #
+                    responseMessage = await m.reply(&"```nim\n{entry.code.trunc(1500, page)}```", embed)
+
                 if entry.code.len > 1500:
                     while true:
+                        # Only add the emojis if the user is actually able to switch pages
                         if page > 0:
                             await discord.api.addMessageReaction(m.channelId, responseMessage.id, backEmoji)
                         if page + 1 < maxPage:
                             await discord.api.addMessageReaction(m.channelId, responseMessage.id, forwardEmoji)
+                        # Wait for the user to respond with an arrow emoji.
+                        # Then change the page depending on that
                         let reaction = await responseMessage.waitForReaction()
-                        if reaction == backEmoji:
-                            if page != 0: # Check that you are not on the first page
-                                page -= 1
+                        case reaction
+                            of backEmoji:
+                                if page != 0: page -= 1 # Check that you are not on the first page. Then go back one page
+                            of forwardEmoji:
+                                if page + 1 < maxPage: page += 1 # Check that you are not on the last page. THen go forward one page
+                            of "": # Reaction is blank if it has timed out
+                                break
 
-                        elif reaction == forwardEmoji:
-                            if page + 1 < maxPage: # Check that you are not on the last page
-                                page += 1
-
-                        elif reaction.isEmptyOrWhiteSpace: # Emojis make it blank
-                            return
-                            
                         embed = some Embed(
                                 title: some entry.name,
                                 description: some entry.description,
                                 url: some entry.url
-                            )                        
+                            )
                         discard await discord.api.editMessage(responseMessage.channelId, responseMessage.id, &"```nim\n{entry.code.trunc(1500, page)}```", embed = embed)
                         try:
                             await discord.api.deleteAllMessageReactions(m.channelId, responseMessage.id)
@@ -114,9 +108,75 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
                             echo("no permission")
             else:
                 discard m.reply("I'm sorry, but there is nothing with this name")
+
+discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
+    if m.author.bot and not m.webhookId.isSome(): return
+    commandHandler("", m)
+#     if unlikely(args[0] == "doc"):
+#         if args.len() == 1:
+#             discard m.reply("You have not specified a name")
+#         else:
+#             let name = args[1]
+#             if name == "help":
+#                 discard m.reply("to use, just send `doc` followed by something in the library e.g. `doc sendMessage`\nFor big things like `doc Events` you can tack a number onto the end to get more `doc Events 2`")
+#                 return
+#             elif name == "search" and args.len() >= 3:
+#                 var msg = ""
+#                 for entry in searchEntry(args[2..<len(args)].join(" ")):
+#                     msg &= entry.name & "\n"
+#                 discard m.reply(msg)
+#                 return
+#             var page = 0
+#             let dbEntry = getEntry(name)
+#             if dbEntry.isSome:
+#                 let
+#                     entry = dbEntry.get()
+#                     maxPage = int ceil(len(entry.code)/1500)
+#                 var embed = some Embed(
+#                         title: some entry.name,
+#                         description: some entry.description,
+#                         url: some entry.url
+#                     )
+
+#                 var responseMessage = await m.reply(&"```nim\n{entry.code.trunc(1500, page)}```", embed)
+#                 #
+#                 # Below this is the handling for the page turning
+#                 #
+#                 if entry.code.len > 1500:
+#                     while true:
+#                         if page > 0:
+#                             await discord.api.addMessageReaction(m.channelId, responseMessage.id, backEmoji)
+#                         if page + 1 < maxPage:
+#                             await discord.api.addMessageReaction(m.channelId, responseMessage.id, forwardEmoji)
+#                         let reaction = await responseMessage.waitForReaction()
+#                         if reaction == backEmoji:
+#                             if page != 0: # Check that you are not on the first page
+#                                 page -= 1
+
+#                         elif reaction == forwardEmoji:
+#                             if page + 1 < maxPage: # Check that you are not on the last page
+#                                 page += 1
+
+#                         elif reaction.isEmptyOrWhiteSpace: # Emojis make it blank
+#                             return
+
+#                         embed = some Embed(
+#                                 title: some entry.name,
+#                                 description: some entry.description,
+#                                 url: some entry.url
+#                             )
+#                         discard await discord.api.editMessage(responseMessage.channelId, responseMessage.id, &"```nim\n{entry.code.trunc(1500, page)}```", embed = embed)
+#                         try:
+#                             await discord.api.deleteAllMessageReactions(m.channelId, responseMessage.id)
+#                         except:
+#                             echo("no permission")
+#             else:
+#                 discard m.reply("I'm sorry, but there is nothing with this name")
+
+
 discord.events.on_ready = proc (s: Shard, r: Ready) {.async.} =
     echo "Ready as " & $r.user
-    
+
 const intents = {
     giGuildMessages,
     giGuildMessageReactions
