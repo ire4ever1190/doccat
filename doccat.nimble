@@ -52,8 +52,8 @@ task clean, "Cleans old files":
     rmFile("src/database")
 
 task release, "Runs all the needed tasks and builds the release binary":
-    pullTask()
     cleanTask()
+    pullTask()
     genDocTask()
     genDBTask()
     exec("nim c --outdir:build/ -d:danger src/doccat.nim")
