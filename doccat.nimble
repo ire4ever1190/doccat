@@ -15,17 +15,7 @@ bin           = @["doccat"]
 requires "nim >= 1.2.0"
 requires "dimscord#head"
 requires "dimscmd >= 0.2.1"
-
-proc toRelative(paths: seq[string], base: string): seq[string] =
-    for path in paths:
-        result &= path.relativePath(base)
-
-proc dirTree(baseDir: string, targetDir: string): seq[string] =
-    let dirs = listDirs(targetDir)
-    result &= dirs.toRelative(baseDir)
-    for dir in dirs:
-        if not dir.contains(".git"):
-            result &= dirTree(baseDir, dir).toRelative(baseDir)
+requires "flatty" # Hey krisp, you dropped this
 
 task pull, "Pulls files from dimscord":
     if existsDir "dimscord":
@@ -41,18 +31,17 @@ task pull, "Pulls files from dimscord":
     cd ".."
 
 task genDoc, "Generates the JSON documentation files":
-    pullTask()
     cd thisDir()
     mkdir "docs"
     cd "docs"
-    for folder in dirTree(thisDir(), thisDir() & "/dimscord"):
-        mkdir(folder)
+    for folder in walkDirRec(thisDir() & "/dimscord", yieldFilter = {pcDir}, relative = true):
+        if not (".git" in folder):
+            mkdir folder
     cd thisDir()
     exec "nim jsondoc --outdir:docs/ --project --git.url:https://github.com/krisppurg/dimscord dimscord/dimscord.nim; exit 0"
 
 task genDB, "Generates the DB":
     rmFile("docs.db")
-    genDocTask()
     exec("nim c -r src/database.nim")
 
 
@@ -64,7 +53,9 @@ task clean, "Cleans old files":
     rmFile("src/database")
 
 task release, "Runs all the needed tasks and builds the release binary":
+    pullTask()
     cleanTask()
+    genDocTask()
     genDBTask()
     exec("nim c --outdir:build/ -d:danger src/doccat.nim")
     mvFile("docs.db", "build/docs.db")
