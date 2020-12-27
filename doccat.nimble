@@ -46,6 +46,7 @@ task genDB, "Generates the DB":
 
 task clean, "Cleans old files":
     rmDir("dimscord")
+    rmDir("build")
     rmFile("version")
     rmFile("db.sqlite3")
     rmFile("docs.db")
