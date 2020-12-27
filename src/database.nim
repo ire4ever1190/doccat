@@ -61,7 +61,7 @@ proc buildDocTable() =
         singleLineCodeRegex = re"<tt class=.docutils literal.><span class=.pre.>([^<]+)<\/span><\/tt>" # Code example html
         aRegex = re"<a class=.[\w ]+. href=.([^<]+).>([^<]+)<\/a>" # Link
         pRegex = re"<p>([\W\s\w]+)</p>" # paragraph
-
+        strongRegex = re"<strong>([\W\s\w]+)</strong>" # Strong (bolded text)
     for path in getFiles("docs"):
         echo path
         if path.endsWith(".json"):
@@ -77,6 +77,7 @@ proc buildDocTable() =
                             .replace("&quot;", "\"")
                             .replace(aRegex, "[$2]($1)")
                             .replace(pRegex, "$1")
+                            .replace(strongRegex, "**$1**")
                 var entryFile = entry.file.unsafeAddr
                 entryFile[] = some(path.replace("docs/dimscord/", "dimscord/").replace(".json", ".nim"))
                 db.exec(sql"INSERT INTO doc VALUES (?, ?, ?, ?, ?)",
