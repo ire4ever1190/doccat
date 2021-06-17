@@ -58,6 +58,7 @@ proc buildDocTable() =
     let # All the regex to find HTML tags
         ulRegex = re"<ul class=.simple.>\n?([\W\s\w]+)\n?<\/ul>" # Start of list
         liRegex = re"<li>(.*)</li>" # List item
+        identRegex = re"<span class=.Identifier.>([^<]+)</span>"
         singleLineCodeRegex = re"<tt class=.docutils literal.><span class=.pre.>([^<]+)<\/span><\/tt>" # Code example html
         aRegex = re"<a class=.[\w ]+. href=.([^<]+).>([^<]+)<\/a>" # Link
         pRegex = re"<p>([\W\s\w]+)</p>" # paragraph
@@ -72,6 +73,7 @@ proc buildDocTable() =
                     var description = entry.description.unsafeAddr
                     description[] = some description[].get() # Use the previous defined regex to replace html with markdown equivalant
                             .replace(ulRegex, "$1")
+                            .replace(identRegex, "$1")
                             .replace(liRegex, "\n - $1")
                             .replace(singleLineCodeRegex, "`$1`")
                             .replace("&quot;", "\"")

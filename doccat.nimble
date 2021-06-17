@@ -14,7 +14,7 @@ bin           = @["doccat"]
 
 requires "nim >= 1.2.0"
 requires "dimscord >= 1.2.4"
-requires "dimscmd#head"
+requires "dimscmd == 1.2.2"
 
 task pull, "Pulls files from dimscord":
     if existsDir "dimscord":
