@@ -54,9 +54,13 @@ discord.events.onDispatch = proc (s: Shard, evt: string, data: JsonNode) {.async
 
 cmd.addChat("docsearch") do (input: seq[string], m: Message):
     var msg = ""
-    for entry in input.join(" ").searchEntry():
-        msg &= entry.name & "\n"
-    discard m.reply(msg)
+    let entries = input.join(" ").searchEntry()
+    if entries.len > 0:
+      for entry in entries:
+          msg &= entry.name & "\n"
+      discard await m.reply(msg)
+    else:
+      discard await m.reply("Sorry, no results found")
 
 cmd.addChat("help") do (): discard # Don't respond to someone saying just help
 

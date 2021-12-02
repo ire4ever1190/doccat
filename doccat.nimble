@@ -13,7 +13,7 @@ bin           = @["doccat"]
 # Dependencies
 
 requires "nim >= 1.2.0"
-requires "dimscord >= 1.2.4"
+# requires "dimscord >= 1.2.4"
 requires "dimscmd == 1.2.2"
 
 task pull, "Pulls files from dimscord":
@@ -57,5 +57,5 @@ task release, "Runs all the needed tasks and builds the release binary":
     pullTask()
     genDocTask()
     genDBTask()
-    exec("nim c --outdir:build/ -d:danger src/doccat.nim")
+    exec("nimble build --outdir:build/ -d:danger src/doccat.nim")
     mvFile("docs.db", "build/docs.db")
