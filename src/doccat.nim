@@ -57,9 +57,10 @@ cmd.addChat("docsearch") do (input: seq[string], m: Message):
     var entries = input.join(" ").searchEntry()
     if entries.len > 0:
       # Only grab first 10 if too many
-      if entries.len > 10:
+      const limit = 25
+      if entries.len > limit:
         msg &= "(results have be truncated)\n"
-        entries = entries[0..9]
+        entries = entries[0..limit - 1]
       for entry in entries:
           msg &= entry.name & "\n"
       discard await m.reply(msg)
