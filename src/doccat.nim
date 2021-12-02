@@ -54,8 +54,12 @@ discord.events.onDispatch = proc (s: Shard, evt: string, data: JsonNode) {.async
 
 cmd.addChat("docsearch") do (input: seq[string], m: Message):
     var msg = ""
-    let entries = input.join(" ").searchEntry()
+    var entries = input.join(" ").searchEntry()
     if entries.len > 0:
+      # Only grab first 10 if too many
+      if entries.len > 10:
+        msg &= "(results have be truncated)\n"
+        entries = entries[0..9]
       for entry in entries:
           msg &= entry.name & "\n"
       discard await m.reply(msg)
