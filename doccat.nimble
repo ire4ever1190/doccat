@@ -7,7 +7,7 @@ description   = "Provides documentation for dimscord"
 license       = "MIT"
 srcDir        = "src"
 bin           = @["doccat"]
-
+bindir = "build"
 
 
 # Dependencies
@@ -57,5 +57,5 @@ task release, "Runs all the needed tasks and builds the release binary":
     pullTask()
     genDocTask()
     genDBTask()
-    exec("nimble build --outdir:build/ -d:danger doccat")
+    exec("nimble build -d:danger doccat")
     mvFile("docs.db", "build/docs.db")
