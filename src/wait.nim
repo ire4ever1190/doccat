@@ -1,24 +1,17 @@
 import asyncdispatch
 import tables
-from dimscord import Message
+import dimscord
 
+var buttonWaits*: Table[string, Future[string]]
 
-# Holds all the waits
-var waits*: Table[string, Future[string]]
-
-proc waitForReaction*(m: Message): Future[string] =
-    result = newFuture[string]()
-    var timeoutFuture = withTimeout(result, 60 * 5 * 1000) # Waits a maximum of 5 minutes for the user to add a reaction
-    timeoutFuture.addCallback(
-        proc(completed: Future[bool]) {.gcsafe.} = # It isn't GC safe but it makes the compiler shut up
-            {.gcsafe.}: # I really hope this doesn't lead to race conditions
-                if not completed.read:
-                    waits[m.id].complete("")
-                    waits.del(m.id)
-            
-    ) # Wait 5 minutes
-    
-    # Waits for a certain emoji to be responded
-    waits[m.id] = result
-    return result
-                                                                                
+proc waitPress*(buttons: seq[MessageComponent], msgID: string): Future[string] =
+  ## Waits for a button from `buttons` to be pressed.
+  ## Returns custom ID of button that was pressed (empty if it timed out)
+  result = newFuture[string](fromProc="waitPress")
+  var timeoutFuture = result.withTimeout(60 * 5 * 1000) # Wait 5 mins max for button presses
+  buttonWaits[msgID] = result
+  timeoutFuture.addCallback() do (completed: Future[bool]):
+    {.gcsafe.}: # This is safe I swear
+      if not completed.read and msgID in buttonWaits:
+        buttonWaits[msgID].complete("")
+        buttonWaits.del(msgID)

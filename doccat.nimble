@@ -14,7 +14,7 @@ bindir = "build"
 
 requires "nim >= 1.2.0"
 # requires "dimscord >= 1.2.4"
-requires "dimscmd == 1.2.2"
+requires "dimscmd == 1.3.1"
 
 task pull, "Pulls files from dimscord":
     if existsDir "dimscord":

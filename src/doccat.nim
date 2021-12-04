@@ -12,6 +12,7 @@ import strformat
 import dimscmd
 import wait
 import database
+import dimscord/restapi/requester
 
 when defined(release):
     const token = TOKEN
@@ -24,12 +25,13 @@ else:
 const
     forwardEmoji = "➡️"
     backEmoji = "⬅️"
+    maxMsgSize = 1500 # Limit is 2000 but this seems more sane for longer messages
 
 let discord = newDiscordClient(token)
 var cmd = discord.newHandler()
 
-proc reply(m: Message, content: string, messageEmbed: Option[Embed] = none(Embed)): Future[Message] {.async.}=
-    return await discord.api.sendMessage(m.channelId, content, embed = messageEmbed)
+proc reply(m: Message, content: string, embeds = newSeq[Embed]()): Future[Message] {.async.}=
+    return await discord.api.sendMessage(m.channelId, content, embeds = embeds)
 
 proc trunc(s: string, length: int, page: int = 0): string =
     if s.len() > length:
@@ -38,32 +40,92 @@ proc trunc(s: string, length: int, page: int = 0): string =
             wordEnd = s.len() # Make the end be the length of the string
         # Return the string data between the n pages in and n + 1 pages in
         # If there is still some remaining text then add '...'
-        result =  s[(page * length) + (if page > 0: -5 else: 0)..<wordEnd] & (if wordEnd < s.len(): "..." else: "")
+        result =  s[(page * length)..<wordEnd]
         if wordEnd < s.len():
-            result &= ""
+          result &= "..."
     else:
         result = s
 
-discord.events.onDispatch = proc (s: Shard, evt: string, data: JsonNode) {.async.} =
-    if evt == "MESSAGE_REACTION_ADD":
-        # If it is an emoji then check if a message is waiting on a reaction
-        if waits.hasKey(data["message_id"].str):
-            let wait = waits[data["message_id"].str]
-            wait.complete(data["emoji"]["name"].str)
-            waits.del(data["message_id"].str)
+proc editMessageNew*(api: RestApi, channel_id, message_id: string;
+        content = ""; tts = false; flags = none(int);
+        embeds = newSeq[Embed](), components = newSeq[MessageComponent]()): Future[Message] {.async.} =
+    ## Edits a discord message.
+    assert content.len <= 2000
+    let payload = %*{
+        "content": content,
+        "tts": tts,
+        "flags": %flags
+    }
+
+    if embeds.len > 0:
+        payload["embeds"] = %embeds
+
+    if components.len > 0:
+        payload["components"] = newJArray()
+        for component in components:
+            payload["components"] &= %%*component
+
+    result = (await api.request(
+        "PATCH",
+        endpointChannelMessages(channel_id, message_id),
+        $payload
+    )).newMessage
+
+func codeBlock(code, lang: string = "nim"): string {.inline.} =
+  result = "```"
+  result &= lang
+  result &= "\n"
+  result &= code
+  result &= "```"
+
+proc sendBigMessage(channelID: string, msg: string, embeds = newSeq[Embed](), isCode = false) {.async.} =
+  ## Used when you are unsure of the size of msg.
+  ## If the message is bigger than the max message size then it adds buttons to flick between pages
+  if msg.len <= maxMsgSize:
+    # Small enough to send in one go
+    discard await discord.api.sendMessage(channelID, if isCode: codeBlock(msg) else: msg, embeds = embeds)
+  else:
+    var page = 0
+    template getMsg: string =
+      ## Get message with proper formatting (e.g. in a codeblock) and truncated to current page
+      block:
+        let truncatedMsg = msg.trunc(maxMsgSize, page)
+        if isCode:
+          codeBlock(truncatedMsg)
+        else:
+          truncatedMsg
+    let
+      maxPage = int ceil(msg.len/maxMsgSize)
+      m = await discord.api.sendMessage(channelID, getMsg(), embeds = embeds)
+    while true:
+      var row = newActionRow()
+      let
+        canGoNext = page + 1 < maxPage
+        canGoBack = page > 0
+      if canGoBack:
+        row &= newButton(label="back", idOrUrl="back")
+      if canGoNext:
+        row &= newButton(label="next", idOrUrl="next")
+      let actionPressed = waitPress(row.components, m.id)
+      discard await discord.api.editMessageNew(channelID, m.id, getMsg(), embeds = embeds, components = @[row])
+      # Now we wait for it to be pressed
+      let action = await actionPressed
+      echo action
+      if action == "next" and canGoNext:
+        inc page
+      elif action == "back" and canGoBack:
+        dec page
+      else:
+        break
 
 cmd.addChat("docsearch") do (input: seq[string], m: Message):
     var msg = ""
-    var entries = input.join(" ").searchEntry()
+    let entries = input.join(" ").searchEntry()
     if entries.len > 0:
       # Only grab first 10 if too many
-      const limit = 25
-      if entries.len > limit:
-        msg &= "(results have be truncated)\n"
-        entries = entries[0..limit - 1]
       for entry in entries:
           msg &= entry.name & "\n"
-      discard await m.reply(msg)
+      await sendBigMessage(m.channelID, msg)
     else:
       discard await m.reply("Sorry, no results found")
 
@@ -82,41 +144,13 @@ cmd.addChat("doc") do (name: string, m: Message):
 
             var
                 page = 0
-                embed = some Embed(
+                embed = Embed(
                     title: some entry.name,
                     description: some entry.description,
                     url: some entry.url
                 )
-                responseMessage = await m.reply(&"```nim\n{entry.code.trunc(1500, page)}```", embed)
+            await sendBigMessage(m.channelID, entry.code, @[embed], true)
 
-            if entry.code.len > 1500:
-                while true:
-                    # Only add the emojis if the user is actually able to switch pages
-                    if page > 0:
-                        await discord.api.addMessageReaction(m.channelId, responseMessage.id, backEmoji)
-                    if page + 1 < maxPage:
-                        await discord.api.addMessageReaction(m.channelId, responseMessage.id, forwardEmoji)
-                    # Wait for the user to respond with an arrow emoji.
-                    # Then change the page depending on that
-                    let reaction = await responseMessage.waitForReaction()
-                    case reaction
-                        of backEmoji:
-                            if page != 0: page -= 1 # Check that you are not on the first page. Then go back one page
-                        of forwardEmoji:
-                            if page + 1 < maxPage: page += 1 # Check that you are not on the last page. THen go forward one page
-                        of "": # Reaction is blank if it has timed out
-                            break
-
-                    embed = some Embed(
-                            title: some entry.name,
-                            description: some entry.description,
-                            url: some entry.url
-                        )
-                    discard await discord.api.editMessage(responseMessage.channelId, responseMessage.id, &"```nim\n{entry.code.trunc(1500, page)}```", embed = embed)
-                    try:
-                        await discord.api.deleteAllMessageReactions(m.channelId, responseMessage.id)
-                    except:
-                        echo("no permission")
         else:
             discard m.reply("I'm sorry, but there is nothing with this name")
 
@@ -126,6 +160,20 @@ discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
 
 discord.events.on_ready = proc (s: Shard, r: Ready) {.async.} =
     echo "Ready as " & $r.user
+
+proc interactionCreate(s: Shard, i: Interaction) {.event(discord).} =
+  echo "Got interaction"
+  if i.data.isSome and i.message.isSome:
+    let
+      data = i.data.get().customID
+      msgID = i.message.get().id
+    if msgID in buttonWaits:
+      buttonWaits[msgID].complete(data)
+      buttonWaits.del msgID
+    try:
+      await discord.api.createInteractionResponse(i.id, i.token, InteractionResponse(kind: irtDeferredUpdateMessage))
+    except: # Sometimes an error occurs somehow
+      echo "how?"
 
 const intents = {
     giGuildMessages,
