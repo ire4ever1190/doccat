@@ -63,6 +63,7 @@ proc buildDocTable() =
         aRegex = re"<a class=.[\w ]+. href=.([^<]+).>([^<]+)<\/a>" # Link
         pRegex = re"<p>([\W\s\w]+)</p>" # paragraph
         strongRegex = re"<strong>([\W\s\w]+)</strong>" # Strong (bolded text)
+    db.exec(sql"BEGIN TRANSACTION")
     for path in getFiles("docs"):
         echo path
         if path.endsWith(".json"):
@@ -89,6 +90,7 @@ proc buildDocTable() =
                     if entry.description.isSome: entry.description.get() else: "",
                     entry.name.unnotation() # Used so the user can search by name
                 )
+    db.exec(sql"COMMIT")
 
 when isMainModule:
     echo("Building docs with " & dimscordVersion)

@@ -41,7 +41,7 @@ task genDoc, "Generates the JSON documentation files":
 
 task genDB, "Generates the DB":
     rmFile("docs.db")
-    exec("nim c -r src/database.nim")
+    exec("nim c -d:release --gc:arc -r src/database.nim")
 
 
 task clean, "Cleans old files":
@@ -57,5 +57,5 @@ task release, "Runs all the needed tasks and builds the release binary":
     pullTask()
     genDocTask()
     genDBTask()
-    exec("nimble build doccat")
+    exec("nimble build -d:release -d:strip -d:lto doccat")
     mvFile("docs.db", "build/docs.db")
