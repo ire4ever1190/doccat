@@ -41,7 +41,7 @@ task genDoc, "Generates the JSON documentation files":
 
 task genDB, "Generates the DB":
     rmFile("docs.db")
-    exec("nim c -r src/database.nim")
+    exec("nim c -d:release --gc:arc -r src/database.nim")
 
 
 task clean, "Cleans old files":
