@@ -37,7 +37,7 @@ task genDoc, "Generates the JSON documentation files":
         if not (".git" in folder):
             mkdir folder
     cd thisDir()
-    exec "nim jsondoc --outdir:docs/ --project --git.url:https://github.com/krisppurg/dimscord dimscord/dimscord.nim; exit 0"
+    exec "nim jsondoc --outdir:docs/ -d:dimscordVoice --index:on --project --git.url:https://github.com/krisppurg/dimscord dimscord/dimscord.nim; exit 0"
 
 task genDB, "Generates the DB":
     rmFile("docs.db")
@@ -57,5 +57,5 @@ task release, "Runs all the needed tasks and builds the release binary":
     pullTask()
     genDocTask()
     genDBTask()
-    exec("nimble build -d:danger doccat")
+    exec("nimble build doccat")
     mvFile("docs.db", "build/docs.db")
