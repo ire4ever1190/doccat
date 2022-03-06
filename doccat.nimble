@@ -57,5 +57,5 @@ task release, "Runs all the needed tasks and builds the release binary":
     pullTask()
     genDocTask()
     genDBTask()
-    exec("nimble build doccat")
+    exec("nimble build -d:release -d:strip -d:lto doccat")
     mvFile("docs.db", "build/docs.db")
