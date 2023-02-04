@@ -14,13 +14,10 @@ import wait
 import database
 import dimscord/restapi/requester
 
-when defined(release):
-    const token = TOKEN
+when not defined(TESTING_TOKEN) or defined(release):
+  const token = TOKEN
 else:
-    when declared(TESTING_TOKEN):
-        const token = TESTING_TOKEN
-    else:
-        const token = TOKEN
+  const token = TESTING_TOKEN
 
 const
     forwardEmoji = "➡️"
@@ -155,8 +152,8 @@ cmd.addChat("doc") do (name: string, m: Message):
             discard m.reply("I'm sorry, but there is nothing with this name")
 
 discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
-    if m.author.bot and not m.webhookId.isSome(): return
-    discard await cmd.handleMessage("", m)
+  if m.author.bot and not m.webhookId.isSome(): return
+  discard await cmd.handleMessage("", m)
 
 discord.events.on_ready = proc (s: Shard, r: Ready) {.async.} =
     echo "Ready as " & $r.user
@@ -177,6 +174,7 @@ proc interactionCreate(s: Shard, i: Interaction) {.event(discord).} =
 
 const intents = {
     giGuildMessages,
+    giMessageContent,
     giGuildMessageReactions
 }
 waitFor discord.startSession(guildSubscriptions = false, intents)
