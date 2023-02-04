@@ -5,48 +5,33 @@ import regex
 import options
 import strutils
 import strformat
-import db_sqlite
 import strtabs
+import ponairi
 
 const
   dimscordVersion = readFile("dimscord/version")
   unnotationRe = (re"(\w)([A-Z])", "$1 $2") # sendMessage -> send Message
 
-let db* = open("docs.db", "", "", "")
+let db* = newConn("docs.db")
 
 type DbEntry* = object
   name*: string
   url*: string
   code*: string
   description*: string
+  searchName*: string
 
 proc createTables() =
-  db.exec(sql"CREATE VIRTUAL TABLE IF NOT EXISTS doc USING FTS5(name, url, code, description, searchName)")
+  db.exec(sql"CREATE VIRTUAL TABLE IF NOT EXISTS DbEntry USING FTS5(name, url, code, description, searchName)")
 
 proc unnotation(input: string): string {.inline.} = input.replace(unnotationRe[0], unnotationRe[1])
 
 proc getEntry*(name: string): Option[DbEntry] =
-  let data = db.getRow(sql"SELECT * FROM doc WHERE name = ? COLLATE NOCASE", name)
-  if data != @["", "", "", "", ""]:
-    return some DbEntry(
-      name: data[0].replace(" ", ""), # Remove all the spaces
-      url: data[1],
-      code: data[2],
-      description: data[3]
-    )
-  return none(DbEntry)
+  return db.find(Option[DbEntry], sql"SELECT * FROM doc WHERE name = ? COLLATE NOCASE", name)
 
 proc searchEntry*(name: string): seq[DbEntry] =
   ## Searches through the database to find something that matches the name
-  for data in db.fastRows(sql"SELECT * FROM doc WHERE doc MATCH ? ORDER BY rank", name):
-    result.add DbEntry(
-      name: data[0].replace(" ", ""),
-      url: data[1],
-      code: data[2],
-      description: data[3]
-    )
-
-
+  result = db.find(seq[DbEntry], sql"SELECT * FROM doc WHERE doc MATCH ? ORDER BY rank", name)
 
 proc buildDocTable() =
   ## gets all the documentation that is in json repr
@@ -64,7 +49,7 @@ proc buildDocTable() =
   # First load the index file so we can get proper links for everything
   let json = parseFile("docs/theindex.json")
 
-  db.exec(sql"BEGIN TRANSACTION")
+  db.startTransaction()
   for path in walkDirRec("docs"):
     if path.endsWith(".json") and not path.endsWith("theindex.json"):
       let json = parseFile(path)
@@ -82,14 +67,14 @@ proc buildDocTable() =
             .replace(strongRegex, "**$1**")
         var entryFile = entry.file.unsafeAddr
         entryFile[] = some(path.replace("docs/dimscord/", "dimscord/").replace(".json", ".nim"))
-        db.exec(sql"INSERT INTO doc VALUES (?, ?, ?, ?, ?)",
-          entry.name,
-          fmt"https://github.com/krisppurg/dimscord/blob/{dimscordVersion}/{entry.file.get()}#L{entry.line}",
-          entry.code,
-          if entry.description.isSome: entry.description.get() else: "",
-          entry.name.unnotation() # Used so the user can search by name
+        db.insert DbEntry(
+            name: entry.name,
+            url: fmt"https://github.com/krisppurg/dimscord/blob/{dimscordVersion}/{entry.file.get()}#L{entry.line}",
+            code: entry.code,
+            description: if entry.description.isSome: entry.description.get() else: "",
+            searchName: entry.name.unnotation()
         )
-  db.exec(sql"COMMIT")
+  db.commit()
 
 when isMainModule:
     echo("Building docs with " & dimscordVersion)
