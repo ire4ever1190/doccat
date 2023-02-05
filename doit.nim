@@ -9,7 +9,9 @@ proc dimscordDate(t: Target): Time =
     let (res, _) = execCmdEx "git --git-dir dimscord/.git log -1 --format=%ct"
     result = res.strip().parseBiggestInt().fromUnix()
 
-task("pull", [], lastModified = dimscordDate, handler = proc (t: Target) =
+task("pull", []):
+  lastModified:
+    t.dimscordDate
   if not dirExists "dimscord":
       cmd "git clone https://github.com/krisppurg/dimscord"
   cd "dimscord":
@@ -18,7 +20,6 @@ task("pull", [], lastModified = dimscordDate, handler = proc (t: Target) =
     echo latestRelease
     writeFile("version", latestRelease)
     cmd "git checkout " & latestRelease
-)
 
 target("docs", ["pull"]):
   mkdir "docs"
@@ -38,6 +39,11 @@ task("clean", []):
   rm "version"
   rm "docs.db"
   rm ".doit"
-task("release", ["doccat", ])
+
+target("build/doccat", ["src/database.nim", "src/doccat.nim"]):
+  cmd "nimble build -d:release doccat"
+
+task("release", ["build/doccat", "docs.db"]):
+  mv "docs.db", "build/docs.db"
 
 run()
