@@ -1,0 +1,7 @@
+docs.db
+build/
+.idea
+.doit
+dimscord/
+docs/
+fly.toml
