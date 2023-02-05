@@ -128,28 +128,30 @@ cmd.addChat("docsearch") do (input: seq[string], m: Message):
 
 cmd.addChat("help") do (): discard # Don't respond to someone saying just help
 
-cmd.addChat("doc") do (name: string, m: Message):
-    if name == "help":
-        discard m.reply("to use, just send `doc` followed by something in the library e.g. `doc sendMessage`\nFor big things like `doc Events` you can switch between the pages using the emojis\nYou can search using `docsearch` followed by what you want to search for")
+cmd.addChat("doc") do (name: string, m: Message, overload: Option[int]):
+  if name == "help":
+    discard m.reply("to use, just send `doc` followed by something in the library e.g. `doc sendMessage`\nFor big things like `doc Events` you can switch between the pages using the emojis\nYou can search using `docsearch` followed by what you want to search for")
 
-    else: # They have specified something to get the documentation for
-        let dbEntry = getEntry(name)
-        if dbEntry.isSome:
-            let
-                entry = dbEntry.get()
-                maxPage = int ceil(len(entry.code)/1500)
+  else: # They have specified something to get the documentation for
+    let
+      entries = getEntry(name)
+      overloadIndex = overload.get(0)
 
-            var
-                page = 0
-                embed = Embed(
-                    title: some entry.name,
-                    description: some entry.description,
-                    url: some entry.url
-                )
-            await sendBigMessage(m.channelID, entry.code, @[embed], true)
+    if entries.len == 0:
+      discard m.reply("I'm sorry, but there is nothing with this name")
+      return
+    elif overloadIndex notin 0 ..< entries.len:
+      discard m.reply(fmt"Overload must in range 0 to {entries.len - 1} (inclusive)")
+      return
 
-        else:
-            discard m.reply("I'm sorry, but there is nothing with this name")
+    let
+      entry = entries[overloadIndex]
+      embed = Embed(
+        title: some entry.name,
+        description: some entry.description & (if entries.len > 1: "\n\n" & fmt"Overload {overloadIndex} of {entries.len - 1}" else: ""),
+        url: some entry.url
+      )
+    await sendBigMessage(m.channelID, entry.code, @[embed], true)
 
 discord.events.message_create = proc (s: Shard, m: Message) {.async.} =
   if m.author.bot and not m.webhookId.isSome(): return

@@ -22,16 +22,18 @@ type DbEntry* = object
   searchName*: string
 
 proc createTables() =
+  db.exec(sql"DROP TABLE IF EXISTS DbEntry")
   db.exec(sql"CREATE VIRTUAL TABLE IF NOT EXISTS DbEntry USING FTS5(name, url, code, description, searchName)")
 
 proc unnotation(input: string): string {.inline.} = input.replace(unnotationRe[0], unnotationRe[1])
 
-proc getEntry*(name: string): Option[DbEntry] =
-  return db.find(Option[DbEntry], sql"SELECT * FROM doc WHERE name = ? COLLATE NOCASE", name)
+proc getEntry*(name: string): seq[DbEntry] =
+  return db.find(seq[DbEntry], sql"SELECT * FROM DbEntry WHERE name = ? COLLATE NOCASE", name)
 
 proc searchEntry*(name: string): seq[DbEntry] =
   ## Searches through the database to find something that matches the name
-  result = db.find(seq[DbEntry], sql"SELECT * FROM doc WHERE doc MATCH ? ORDER BY rank", name)
+  echo "Searching for ", name
+  result = db.find(seq[DbEntry], sql"SELECT * FROM DbEntry WHERE DbEntry MATCH ? ORDER BY rank", name)
 
 proc buildDocTable() =
   ## gets all the documentation that is in json repr
