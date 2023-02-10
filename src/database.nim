@@ -22,13 +22,19 @@ type DbEntry* = object
   searchName*: string
 
 proc createTables() =
-  db.exec(sql"DROP TABLE IF EXISTS DbEntry")
+  db.drop DbEntry
   db.exec(sql"CREATE VIRTUAL TABLE IF NOT EXISTS DbEntry USING FTS5(name, url, code, description, searchName)")
 
 proc unnotation(input: string): string {.inline.} = input.replace(unnotationRe[0], unnotationRe[1])
 
+func eqNoCase(a, b: QueryPart[string]): QueryPart[bool] =
+  ## Compare two values. Is case insensitive
+  result = QueryPart[bool](fmt"{a.string} = {b.string} COLLATE NOCASE")
+
 proc getEntry*(name: string): seq[DbEntry] =
-  return db.find(seq[DbEntry], sql"SELECT * FROM DbEntry WHERE name = ? COLLATE NOCASE", name)
+  return db.find(seq[DbEntry].where(
+    name.eqNoCase(?string)
+  ), name)
 
 proc searchEntry*(name: string): seq[DbEntry] =
   ## Searches through the database to find something that matches the name

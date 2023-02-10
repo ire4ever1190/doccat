@@ -13,5 +13,5 @@ bindir = "build"
 
 requires "nim >= 1.2.0"
 requires "dimscmd == 1.3.3"
-requires "ponairi#7f2b6ef"
+requires "ponairi#b1febf6"
 requires "regex >= 0.19.0"
