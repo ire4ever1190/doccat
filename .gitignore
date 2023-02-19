@@ -6,3 +6,6 @@ src/doccat
 version
 jsondocs
 *.db
+docs/
+.doit
+build/

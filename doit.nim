@@ -22,12 +22,12 @@ task("pull", []):
     cmd "git checkout " & latestRelease
 
 target("docs", ["pull"]):
-  mkdir "docs"
+  mkdir "docs/dimscord"
   cd "docs":
     for folder in walkDirRec(pwd() / "dimscord", yieldFilter = {pcDir}, relative = true):
       if not (".git" in folder):
         mkdir folder
-  cmd "nim jsondoc --outdir:docs/ -d:dimscordVoice --threads:off --index:on --project --git.url:https://github.com/krisppurg/dimscord dimscord/dimscord.nim; exit 0"
+  cmd "nim jsondoc --outdir:docs/ -d:dimscordVoice --threads:off --index:on --project --git.url:https://github.com/krisppurg/dimscord dimscord/dimscord.nim"
 
 target("docs.db", ["docs", "src/database.nim"]):
   cmd "nimble run -d:release database"
@@ -35,7 +35,8 @@ target("docs.db", ["docs", "src/database.nim"]):
 task("clean", []):
   rm("dimscord", true)
   rm("build", true)
-  rm("src/database")
+  rm("docs", true)
+  rm "src/database"
   rm "version"
   rm "docs.db"
   rm ".doit"
@@ -43,7 +44,7 @@ task("clean", []):
 target("build/doccat", ["src/database.nim", "src/doccat.nim"]):
   cmd "nimble build -d:release doccat"
 
-task("release", ["build/doccat", "docs.db"]):
+task("release", ["docs.db", "build/doccat"]):
   mv "docs.db", "build/docs.db"
 
 run()

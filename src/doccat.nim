@@ -14,10 +14,13 @@ import wait
 import database
 import dimscord/restapi/requester
 
-when not defined(TESTING_TOKEN) or defined(release):
-  const token = TOKEN
+when not defined(useConfig):
+  let token = getEnv("DISCORD_TOKEN")
 else:
-  const token = TESTING_TOKEN
+  when not declared(TESTING_TOKEN) or defined(release):
+    const token = TOKEN
+  else:
+    const token = TESTING_TOKEN
 
 const
     forwardEmoji = "➡️"
