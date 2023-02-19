@@ -12,6 +12,7 @@ bindir        = "build"
 # Dependencies
 
 requires "nim >= 1.2.0"
+requires "dimscord >= 1.4.0"
 requires "dimscmd == 1.3.3"
 requires "ponairi#7f2b6ef"
 requires "regex == 0.20.1"

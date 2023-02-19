@@ -22,7 +22,6 @@ task("pull", []):
     cmd "git checkout " & latestRelease
 
 target("docs", ["pull"]):
-  mkdir "docs"
   mkdir "docs/dimscord"
   cd "docs":
     for folder in walkDirRec(pwd() / "dimscord", yieldFilter = {pcDir}, relative = true):
