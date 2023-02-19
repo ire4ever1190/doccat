@@ -2,7 +2,6 @@ import segfaults
 import math
 import dimscord
 import asyncdispatch
-import config
 import strutils
 import os
 import json
@@ -17,6 +16,7 @@ import dimscord/restapi/requester
 when not defined(useConfig):
   let token = getEnv("DISCORD_TOKEN")
 else:
+  import config
   when not declared(TESTING_TOKEN) or defined(release):
     const token = TOKEN
   else:
