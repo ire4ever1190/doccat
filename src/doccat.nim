@@ -110,7 +110,6 @@ proc sendBigMessage(channelID: string, msg: string, embeds = newSeq[Embed](), is
       discard await discord.api.editMessageNew(channelID, m.id, getMsg(), embeds = embeds, components = @[row])
       # Now we wait for it to be pressed
       let action = await actionPressed
-      echo action
       if action == "next" and canGoNext:
         inc page
       elif action == "back" and canGoBack:
@@ -164,7 +163,6 @@ discord.events.on_ready = proc (s: Shard, r: Ready) {.async.} =
     echo "Ready as " & $r.user
 
 proc interactionCreate(s: Shard, i: Interaction) {.event(discord).} =
-  echo "Got interaction"
   if i.data.isSome and i.message.isSome:
     let
       data = i.data.get().customID

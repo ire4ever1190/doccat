@@ -38,7 +38,6 @@ proc getEntry*(name: string): seq[DbEntry] =
 
 proc searchEntry*(name: string): seq[DbEntry] =
   ## Searches through the database to find something that matches the name
-  echo "Searching for ", name
   result = db.find(seq[DbEntry], sql"SELECT * FROM DbEntry WHERE DbEntry MATCH ? ORDER BY rank", name)
 
 proc buildDocTable() =
