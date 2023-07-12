@@ -4,7 +4,7 @@ RUN apt-get install git sqlite3 -y
 RUN choosenim devel
 ADD . .
 RUN nimble update
-RUN nimble install https://github.com/ire4ever1190/doit@#4c65b59
+RUN nimble install https://github.com/ire4ever1190/doit@#ddef9fef8e2708142d13c16d0d3eb42e7b17960c
 RUN git config --global --add safe.directory /tmp
 # Install dimscord dependencies so that building docs doesn't fail
 RUN nimble install dimscord
