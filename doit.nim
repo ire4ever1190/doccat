@@ -27,7 +27,7 @@ target("docs", ["pull"]):
     for folder in walkDirRec(pwd() / "dimscord", yieldFilter = {pcDir}, relative = true):
       if not (".git" in folder):
         mkdir folder
-  cmd "nim jsondoc --outdir:docs/ -d:dimscordVoice --threads:off --index:on --project --git.url:https://github.com/krisppurg/dimscord dimscord/dimscord.nim"
+  cmd "nim jsondoc --outdir:docs/ -d:dimscordVoice --showNonExports --threads:off --index:on --project --git.url:https://github.com/krisppurg/dimscord dimscord/dimscord.nim"
 
 target("docs.db", ["docs", "src/database.nim"]):
   cmd "nimble run -d:release database"
