@@ -27,14 +27,8 @@ proc createTables() =
 
 proc unnotation(input: string): string {.inline.} = input.replace(unnotationRe[0], unnotationRe[1])
 
-func eqNoCase(a, b: QueryPart[string]): QueryPart[bool] =
-  ## Compare two values. Is case insensitive
-  result = QueryPart[bool](fmt"{a.string} = {b.string} COLLATE NOCASE")
-
 proc getEntry*(name: string): seq[DbEntry] =
-  return db.find(seq[DbEntry].where(
-    name.eqNoCase(?string)
-  ), name)
+  return db.find(seq[DbEntry], sql"SELECT * FROM DbEntry WHERE name = ? COLLATE NOCASE", name)
 
 proc searchEntry*(name: string): seq[DbEntry] =
   ## Searches through the database to find something that matches the name

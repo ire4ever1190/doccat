@@ -1,4 +1,4 @@
-FROM nimlang/nim:1.6.14-ubuntu-regular AS builder
+FROM nimlang/nim:latest-ubuntu-regular AS builder
 WORKDIR /tmp
 RUN apt-get install git sqlite3 -y
 ADD . .
