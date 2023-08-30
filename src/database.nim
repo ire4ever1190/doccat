@@ -56,6 +56,7 @@ proc buildDocTable() =
   # First load the index file so we can get proper links for everything
   let json = parseFile("docs/theindex.json")
 
+  # Then go through the rest of the documents
   db.startTransaction()
   for path in walkDirRec("docs"):
     if path.endsWith(".json") and not path.endsWith("theindex.json"):
