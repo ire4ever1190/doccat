@@ -1,7 +1,6 @@
-FROM nimlang/choosenim AS builder
+FROM nimlang/nim:2.0.8-ubuntu as builder
 WORKDIR /tmp
 RUN apt-get install git sqlite3 -y
-RUN choosenim devel
 ADD . .
 RUN nimble update
 RUN nimble install https://github.com/ire4ever1190/doit@#ddef9fef8e2708142d13c16d0d3eb42e7b17960c
