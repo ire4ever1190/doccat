@@ -12,7 +12,7 @@ bindir        = "build"
 # Dependencies
 
 requires "nim >= 1.2.0"
-requires "dimscord >= 1.4.0"
+requires "dimscord#d176db0"
 requires "dimscmd >= 1.4.0"
 requires "lowdb >= 0.2.1"
 requires "ponairi == 0.3.2"
