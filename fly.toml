@@ -4,6 +4,9 @@ kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
 
+[[services]]
+  auto_stop_machines = "off"
+
 [build]
   dockerfile = "Dockerfile"
   build-target = "runner"
