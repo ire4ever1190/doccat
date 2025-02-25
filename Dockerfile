@@ -1,6 +1,6 @@
 FROM codexstorage/nim-lang:2.0.8 AS builder
 WORKDIR /tmp
-RUN apt-get install git sqlite3 -y
+RUN apt-get update && apt-get install git sqlite3 -y && rm -rf /var/lib/apt/lists/*
 ADD . .
 RUN nimble update
 RUN nimble install https://github.com/ire4ever1190/doit@#ddef9fef8e2708142d13c16d0d3eb42e7b17960c
@@ -10,7 +10,7 @@ RUN nimble install dimscord
 RUN doit release
 
 FROM bitnami/minideb:latest AS runner
-RUN apt-get update && apt-get install sqlite3 openssl ca-certificates -y
+RUN apt-get update && apt-get install sqlite3 openssl ca-certificates -y && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /tmp/build/doccat ./doccat
 COPY --from=builder /tmp/build/docs.db ./docs.db
 CMD ["./doccat"]
