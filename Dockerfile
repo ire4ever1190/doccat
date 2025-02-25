@@ -1,4 +1,4 @@
-FROM nimlang/nim:2.0.8-ubuntu as builder
+FROM codexstorage/nim-lang:2.0.8 AS builder
 WORKDIR /tmp
 RUN apt-get install git sqlite3 -y
 ADD . .
