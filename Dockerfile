@@ -9,8 +9,8 @@ RUN git config --global --add safe.directory /tmp
 RUN nimble install dimscord
 RUN doit release
 
-FROM bitnami/minideb:latest AS runner
-RUN apt-get update && apt-get install sqlite3 openssl ca-certificates -y && rm -rf /var/lib/apt/lists/*
+FROM alpine:3.20 AS runner
+RUN apk add --no-cache sqlite-dev openssl ca-certificates
 COPY --from=builder /tmp/build/doccat ./doccat
 COPY --from=builder /tmp/build/docs.db ./docs.db
 CMD ["./doccat"]
