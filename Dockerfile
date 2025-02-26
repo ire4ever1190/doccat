@@ -1,6 +1,6 @@
-FROM codexstorage/nim-lang:2.0.8 AS builder
+FROM ekajake/nim-test:2.0.14-alpine AS builder
 WORKDIR /tmp
-RUN apt-get update && apt-get install git sqlite3 -y && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache git sqlite-dev
 ADD . .
 RUN nimble update
 RUN nimble install https://github.com/ire4ever1190/doit@#ddef9fef8e2708142d13c16d0d3eb42e7b17960c
