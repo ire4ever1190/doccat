@@ -180,4 +180,4 @@ const intents = {
     giMessageContent,
     giGuildMessageReactions
 }
-waitFor discord.startSession(guildSubscriptions = false, intents)
+waitFor discord.startSession(gateway_intents = intents)
